@@ -1,21 +1,20 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import Layout from '@/components/layout/Layout';
-import Home from '@/pages/Home';
-import About from '@/pages/About';
-import Profile from '@/pages/Profile';
-import Settings from '@/pages/Settings';
+import Books from '@/pages/Books/';
+import Authors from '@/pages/Authors';
+import { books, authors } from '@/pages/Books/data';
 
 function App() {
   return (
     <BrowserRouter>
-      <Layout>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/about" element={<About />} />
-          <Route path="/profile" element={<Profile />} />
-          <Route path="/settings" element={<Settings />} />
-        </Routes>
-      </Layout>
+      <Routes>
+        <Route path="/" element={<Layout />}>
+          <Route index element={<Books books={books} authors={authors} />} />
+          <Route path="authors" element={<Authors authors={authors} books={books} />} />
+        </Route>
+      </Routes>
     </BrowserRouter>
   );
-}
+};
+
+export default App;
