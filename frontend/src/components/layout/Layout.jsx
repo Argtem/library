@@ -8,7 +8,7 @@ const Layout = () => {
       <header className="bg-dark text-white">
         <nav className="navbar navbar-expand-lg navbar-dark bg-dark">
           <div className="container">
-            <h1 className="navbar-brand mb-0 h1">Библиотека</h1>
+            <h1 className="navbar-brand mb-0 h1">Личная библиотека</h1>
             <button
               className="navbar-toggler"
               type="button"
@@ -37,7 +37,7 @@ const Layout = () => {
 
       <footer className="bg-light text-dark border-top mt-auto py-3">
         <div className="container text-center">
-          <p className="mb-0">© 2026 Библиотека Артема Г. | Все права защищены</p>
+          <p className="mb-0">© 2026 Личная библиотека | Все права защищены</p>
         </div>
       </footer>
     </div>
