@@ -1,18 +1,17 @@
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import FilterBooks from './Filter';
 import AddBookModal from './components/AddBookModal';
 import EditBookModal from './components/EditBookModal';
 import DeleteConfirmModal from './components/DeleteConfirmModal';
-import type { IBook, IAuthor } from './types';
-import { Book, BookHalf, CheckCircle, Plus, Pencil, Trash } from 'react-bootstrap-icons';
+import { Book, Author, getBooks, createBook, updateBook, deleteBook, getAuthors } from '@/services/api';
+import { Book as BookIcon, BookHalf, CheckCircle, Plus, Pencil, Trash } from 'react-bootstrap-icons';
 
-interface BooksProps {
-  books: IBook[];
-  authors: IAuthor[];
-}
-
-const Books = ({ books: initialBooks, authors }: BooksProps) => {
-  const [books, setBooks] = useState<IBook[]>(initialBooks);
+const Books = () => {
+  const [books, setBooks] = useState<Book[]>([]);
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [loading, setLoading] = useState(true);
+  
+  // Фильтры
   const [searchText, setSearchText] = useState<string>('');
   const [selectedAuthorId, setSelectedAuthorId] = useState<number | ''>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
@@ -21,8 +20,8 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedBook, setSelectedBook] = useState<IBook | null>(null);
-  const [bookToDelete, setBookToDelete] = useState<IBook | null>(null);
+  const [selectedBook, setSelectedBook] = useState<Book | null>(null);
+  const [bookToDelete, setBookToDelete] = useState<Book | null>(null);
 
   // Состояния форм
   const [newBookTitle, setNewBookTitle] = useState('');
@@ -35,7 +34,34 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
   const [editStatus, setEditStatus] = useState<string>('В плане');
   const [editAnnotation, setEditAnnotation] = useState('');
 
-  // Вспомогательные функции
+  // Загрузка авторов (один раз)
+  useEffect(() => {
+    getAuthors()
+      .then(setAuthors)
+      .catch(console.error);
+  }, []);
+
+  // Загрузка книг с учётом фильтров
+  const loadBooks = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getBooks({
+        search: searchText,
+        authorId: selectedAuthorId,
+        status: selectedStatus,
+      });
+      setBooks(data);
+    } catch (error) {
+      console.error('Failed to load books:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchText, selectedAuthorId, selectedStatus]);
+
+  useEffect(() => {
+    loadBooks();
+  }, [loadBooks]);
+
   const getAuthorName = (authorId: number): string => {
     const author = authors.find(a => a.id === authorId);
     return author ? author.name : 'Неизвестный автор';
@@ -43,7 +69,7 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'В плане': return <Book className="me-1" />;
+      case 'В плане': return <BookIcon className="me-1" />;
       case 'Читаю': return <BookHalf className="me-1" />;
       case 'Прочел': return <CheckCircle className="me-1" />;
       default: return null;
@@ -59,50 +85,53 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
     }
   };
 
-  // Фильтрация книг
-  const filteredBooks = useMemo(() => {
-    let result = [...books];
-    if (selectedAuthorId !== '') result = result.filter(b => b.author_id === selectedAuthorId);
-    if (selectedStatus !== '') result = result.filter(b => b.status === selectedStatus);
-    const trimmedSearch = searchText.trim();
-    if (trimmedSearch.length >= 3) {
-      const lower = trimmedSearch.toLowerCase();
-      result = result.filter(b => b.title.toLowerCase().includes(lower));
+  // CRUD операции
+  const handleAddBook = async (bookData: Omit<Book, 'id'>) => {
+    try {
+      const newBook = await createBook(bookData);
+      setBooks(prev => [...prev, newBook]);
+      setNewBookTitle('');
+      setNewBookAuthorId('');
+      setNewBookStatus('В плане');
+      setNewBookAnnotation('');
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Failed to add book:', error);
+      alert('Не удалось добавить книгу');
     }
-    return result;
-  }, [books, searchText, selectedAuthorId, selectedStatus]);
-
-  // Муляжи функций
-  const handleAddBook = (bookData: Omit<IBook, 'id'>) => {
-    const newId = Math.max(...books.map(b => b.id), 0) + 1;
-    const newBook: IBook = { id: newId, ...bookData };
-    setBooks([...books, newBook]);
-    // Сброс формы
-    setNewBookTitle('');
-    setNewBookAuthorId('');
-    setNewBookStatus('В плане');
-    setNewBookAnnotation('');
-    setShowAddModal(false);
-    console.log('Книга добавлена (муляж):', newBook);
   };
 
-  const handleEditBook = (updatedBook: IBook) => {
-    setBooks(books.map(b => b.id === updatedBook.id ? updatedBook : b));
-    setShowEditModal(false);
-    setSelectedBook(null);
-    console.log('Книга обновлена (муляж):', updatedBook);
+  const handleEditBook = async (updatedBook: Book) => {
+    try {
+      const result = await updateBook(updatedBook.id, {
+        title: updatedBook.title,
+        author_id: updatedBook.author_id,
+        status: updatedBook.status,
+        annotation: updatedBook.annotation,
+      });
+      setBooks(prev => prev.map(b => b.id === result.id ? result : b));
+      setShowEditModal(false);
+      setSelectedBook(null);
+    } catch (error) {
+      console.error('Failed to update book:', error);
+      alert('Не удалось обновить книгу');
+    }
   };
 
-  const handleDeleteBook = () => {
-    if (bookToDelete) {
-      setBooks(books.filter(b => b.id !== bookToDelete.id));
+  const handleDeleteBook = async () => {
+    if (!bookToDelete) return;
+    try {
+      await deleteBook(bookToDelete.id);
+      setBooks(prev => prev.filter(b => b.id !== bookToDelete.id));
       setShowDeleteModal(false);
       setBookToDelete(null);
-      console.log('Книга удалена (муляж):', bookToDelete.title);
+    } catch (error) {
+      console.error('Failed to delete book:', error);
+      alert('Не удалось удалить книгу');
     }
   };
 
-  const openEditModal = (book: IBook) => {
+  const openEditModal = (book: Book) => {
     setSelectedBook(book);
     setEditTitle(book.title);
     setEditAuthorId(book.author_id);
@@ -111,7 +140,7 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
     setShowEditModal(true);
   };
 
-  const openDeleteModal = (book: IBook) => {
+  const openDeleteModal = (book: Book) => {
     setBookToDelete(book);
     setShowDeleteModal(true);
   };
@@ -134,8 +163,10 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
         onStatusChange={setSelectedStatus}
       />
 
+      {loading && <div className="text-center">Загрузка...</div>}
+
       <div className="row">
-        {filteredBooks.map(book => (
+        {!loading && books.map(book => (
           <div key={book.id} className="col-md-6 col-lg-4 mb-4">
             <div className="card h-100 shadow-sm position-relative">
               <div className="position-absolute top-0 end-0 p-2 d-flex gap-2">
@@ -161,7 +192,9 @@ const Books = ({ books: initialBooks, authors }: BooksProps) => {
         ))}
       </div>
 
-      {filteredBooks.length === 0 && <div className="alert alert-warning text-center">Книги не найдены</div>}
+      {!loading && books.length === 0 && (
+        <div className="alert alert-warning text-center">Книги не найдены</div>
+      )}
 
       {/* Модалки */}
       <AddBookModal

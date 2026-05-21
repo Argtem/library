@@ -1,32 +1,41 @@
-// src/pages/Authors/index.tsx
-import { useState, useMemo } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import FilterAuthors from './Filter';
 import AddAuthorModal from './components/AddAuthorModal';
 import EditAuthorModal from './components/EditAuthorModal';
-import type { IAuthor, IBook } from '../Books/types';
-import { Book, BookHalf, CheckCircle, Pencil, Plus } from 'react-bootstrap-icons';
+import { Author, Book, getAuthors, createAuthor, updateAuthor } from '@/services/api';
+import { Book as BookIcon, BookHalf, CheckCircle, Pencil, Plus } from 'react-bootstrap-icons';
 
-interface AuthorsProps {
-  authors: IAuthor[];
-  books: IBook[];
-}
-
-const Authors = ({ authors: initialAuthors, books }: AuthorsProps) => {
-  const [authors, setAuthors] = useState<IAuthor[]>(initialAuthors);
+const Authors = () => {
+  const [authors, setAuthors] = useState<Author[]>([]);
+  const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState<string>('');
 
-  // Состояния модалок
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedAuthor, setSelectedAuthor] = useState<IAuthor | null>(null);
+  const [selectedAuthor, setSelectedAuthor] = useState<Author | null>(null);
 
-  // Состояния форм
   const [newAuthorName, setNewAuthorName] = useState('');
   const [editAuthorName, setEditAuthorName] = useState('');
 
+  const loadAuthors = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await getAuthors(searchText);
+      setAuthors(data);
+    } catch (error) {
+      console.error('Failed to load authors:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [searchText]);
+
+  useEffect(() => {
+    loadAuthors();
+  }, [loadAuthors]);
+
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'В плане': return <Book />;
+      case 'В плане': return <BookIcon />;
       case 'Читаю': return <BookHalf />;
       case 'Прочел': return <CheckCircle />;
       default: return null;
@@ -42,38 +51,31 @@ const Authors = ({ authors: initialAuthors, books }: AuthorsProps) => {
     }
   };
 
-  // Фильтрация авторов по имени (от 3 символов)
-  const filteredAuthors = useMemo(() => {
-    const trimmedSearch = searchText.trim();
-    if (trimmedSearch.length < 3) return authors;
-    const lowerSearch = trimmedSearch.toLowerCase();
-    return authors.filter(author =>
-      author.name.toLowerCase().includes(lowerSearch)
-    );
-  }, [authors, searchText]);
-
-  const getBooksByAuthor = (authorId: number): IBook[] => {
-    return books.filter(book => book.author_id === authorId);
+  const handleAddAuthor = async (name: string) => {
+    try {
+      const newAuthor = await createAuthor(name);
+      setAuthors(prev => [...prev, newAuthor]);
+      setNewAuthorName('');
+      setShowAddModal(false);
+    } catch (error) {
+      console.error('Failed to add author:', error);
+      alert('Не удалось добавить автора');
+    }
   };
 
-  // Муляжи функций
-  const handleAddAuthor = (name: string) => {
-    const newId = Math.max(...authors.map(a => a.id), 0) + 1;
-    const newAuthor: IAuthor = { id: newId, name };
-    setAuthors([...authors, newAuthor]);
-    setNewAuthorName('');
-    setShowAddModal(false);
-    console.log('Автор добавлен (муляж):', newAuthor);
+  const handleEditAuthor = async (updatedAuthor: Author) => {
+    try {
+      const result = await updateAuthor(updatedAuthor.id, updatedAuthor.name);
+      setAuthors(prev => prev.map(a => a.id === result.id ? result : a));
+      setShowEditModal(false);
+      setSelectedAuthor(null);
+    } catch (error) {
+      console.error('Failed to update author:', error);
+      alert('Не удалось обновить автора');
+    }
   };
 
-  const handleEditAuthor = (updatedAuthor: IAuthor) => {
-    setAuthors(authors.map(a => a.id === updatedAuthor.id ? updatedAuthor : a));
-    setShowEditModal(false);
-    setSelectedAuthor(null);
-    console.log('Автор обновлён (муляж):', updatedAuthor);
-  };
-
-  const openEditModal = (author: IAuthor) => {
+  const openEditModal = (author: Author) => {
     setSelectedAuthor(author);
     setEditAuthorName(author.name);
     setShowEditModal(true);
@@ -89,9 +91,11 @@ const Authors = ({ authors: initialAuthors, books }: AuthorsProps) => {
 
       <FilterAuthors searchText={searchText} onSearchChange={setSearchText} />
 
+      {loading && <div className="text-center">Загрузка...</div>}
+
       <div className="row">
-        {filteredAuthors.map(author => {
-          const authorBooks = getBooksByAuthor(author.id);
+        {!loading && authors.map(author => {
+          const authorBooks = author.books || [];
           return (
             <div key={author.id} className="col-md-6 col-lg-4 mb-4">
               <div className="card h-100 shadow-sm position-relative">
@@ -127,13 +131,10 @@ const Authors = ({ authors: initialAuthors, books }: AuthorsProps) => {
         })}
       </div>
 
-      {filteredAuthors.length === 0 && (
-        <div className="alert alert-warning text-center" role="alert">
-          Авторы не найдены
-        </div>
+      {!loading && authors.length === 0 && (
+        <div className="alert alert-warning text-center">Авторы не найдены</div>
       )}
 
-      {/* Модалки */}
       <AddAuthorModal
         show={showAddModal}
         onClose={() => setShowAddModal(false)}
