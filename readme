@@ -1,0 +1,168 @@
+# Личная библиотека.
+
+Веб-приложение для управления личной библиотекой: книги, авторы, фильтрация, добавление/редактирование/удаление записей.  
+Реализованы полноценные frontend и backend части с базой данных PostgreSQL.
+
+## Стек технологий
+
+### Frontend
+- React 18 (функциональные компоненты, хуки)
+- TypeScript
+- React Router v6
+- Bootstrap 5 + React-Bootstrap + CSS Modules
+- React Bootstrap Icons
+- Vite (сборка, прокси)
+
+### Backend
+- Node.js + Express.js
+- TypeScript
+- PostgreSQL
+- Prisma ORM (миграции, клиент)
+- @prisma/adapter-pg + pg
+- CORS, dotenv
+
+## Функциональность
+
+- **Страница книг**
+  - Список книг (карточки: название, автор, аннотация, статус)
+  - Фильтрация по автору, статусу, поиск по названию (от 3 символов)
+  - Добавление новой книги (модальное окно)
+  - Редактирование книги
+  - Удаление книги (с подтверждением)
+- **Страница авторов**
+  - Список авторов с привязанными книгами
+  - Фильтр по имени (от 3 символов)
+  - Добавление / редактирование автора
+- **Адаптивный интерфейс** (Bootstrap, бургер-меню)
+- **Валидация форм** на фронте и бэке
+- **REST API** на Express с Prisma
+
+## Установка и запуск
+
+### Требования
+- Node.js (версия 18+)
+- PostgreSQL (локально или облачный сервер)
+- Git
+
+### 1. Клонирование репозитория
+```bash
+git clone <URL_репозитория>
+cd library_project
+```
+### 2. Настройка backend
+
+Перейди в папку backend:
+bash
+
+cd backend
+
+Установи зависимости:
+bash
+
+npm install
+
+Создай файл .env (на основе .env.example):
+env
+
+DATABASE_URL="postgresql://postgres:твой_пароль@localhost:5432/library_app"
+PORT=3000
+
+Создай базу данных (через pgAdmin или командой):
+bash
+
+createdb library_app
+
+Выполни миграции Prisma:
+bash
+
+npx prisma migrate dev --name init
+
+Запусти сервер разработки:
+bash
+
+npm run dev
+
+Сервер запустится на http://localhost:3000
+### 3. Настройка frontend
+
+В другом терминале перейди в папку frontend:
+bash
+
+cd ../frontend
+
+Установи зависимости:
+bash
+
+npm install
+
+Запусти dev-сервер:
+bash
+
+npm run dev
+
+Приложение будет доступно на http://localhost:5173
+### 4. Использование
+
+    Открой http://localhost:5173
+
+    Сначала добавь авторов (страница "Авторы")
+
+    Затем добавляй книги (страница "Книги")
+
+    Работай с фильтрами, редактируй и удаляй записи
+
+### Структура
+library_project/
+├── backend/
+│   ├── prisma/
+│   │   ├── schema.prisma
+│   │   └── migrations/
+│   ├── src/
+│   │   ├── controllers/
+│   │   ├── routes/
+│   │   ├── index.ts
+│   │   └── prisma.ts
+│   ├── .env
+│   ├── package.json
+│   └── tsconfig.json
+├── frontend/
+│   ├── src/
+│   │   ├── pages/
+│   │   │   ├── Books/
+│   │   │   │   ├── components/
+│   │   │   │   ├── Filter/
+│   │   │   │   └── index.tsx
+│   │   │   └── Authors/
+│   │   ├── components/
+│   │   ├── services/
+│   │   │   └── api.ts
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   └── vite.config.ts
+└── README.md
+
+
+### Возможные проблемы и решения
+
+    CORS ошибка – убедись, что в backend/src/index.ts настроен CORS с origin: true или списком разрешённых портов.
+
+    Порт уже используется – измени порт в vite.config.ts или .env бэкенда.
+
+    База данных не найдена – проверь DATABASE_URL и существование базы.
+
+    Prisma ошибка url is required – убедись, что в prisma/schema.prisma нет url, а в prisma.config.ts правильно указан datasource.url.
+
+### Планы по развитию
+
+    Добавить аутентификацию (JWT)
+
+    Реализовать учёт разных пользователей
+
+    Возможность отмечать прочитанные страницы
+
+    Экспорт/импорт библиотеки
+
+
+
+
