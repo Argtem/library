@@ -1,0 +1,19 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Get a free hosted Postgres database in seconds: `npx create-db`
+
+model Author {
+  id    Int     @id @default(autoincrement())
+  name  String  @db.Text
+  books Book[]
+}
+
+model Book {
+  id         Int     @id @default(autoincrement())
+  title      String  @db.Text
+  author_id  Int
+  status     String  @db.Text // "В плане" | "Читаю" | "Прочел"
+  annotation String? @db.Text
+  author     Author  @relation(fields: [author_id], references: [id])
+}
